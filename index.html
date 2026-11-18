@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPO Valuation & Listing Performance</title>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: one calm column. Thesis first, two charts that carry the argument, then the raw table. Colour is reserved for gain (green) and loss (red). */
+:root{
+  --bg:#F3F5F9; --surface:#FFFFFF; --ink:#0F172A; --muted:#566277; --line:#DCE1EA; --soft:#E8ECF4;
+  --accent:#2C47D1; --gain:#0B8A64; --loss:#C23B35;
+  --f-head:'Space Grotesk','Inter',system-ui,sans-serif; --f-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1019; --surface:#131A28; --ink:#E6EBF5; --muted:#95A1B6; --line:#243047; --soft:#1A2335;
+  --accent:#8FA3FF; --gain:#3FCB9F; --loss:#FF7E75; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1019; --surface:#131A28; --ink:#E6EBF5; --muted:#95A1B6; --line:#243047; --soft:#1A2335;
+  --accent:#8FA3FF; --gain:#3FCB9F; --loss:#FF7E75; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 var(--f-body);
+  padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1040px;margin:0 auto;padding-block:40px 56px;display:flex;flex-direction:column;gap:48px}
+h1,h2,h3{font-family:var(--f-head);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(2rem,5.2vw,3.4rem);line-height:1.08;font-weight:700;max-width:18ch}
+h1 em{font-style:normal;color:var(--accent)}
+h2{font-size:1.45rem;line-height:1.2;font-weight:700}
+h3{font-size:1rem;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:.78rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.lead{font-size:1.125rem;color:var(--muted);max-width:62ch}
+.lead strong{color:var(--ink);font-weight:600}
+header{display:flex;flex-direction:column;gap:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat b{font:700 2rem/1.1 var(--f-head);font-variant-numeric:tabular-nums}
+.stat span{font-size:.88rem;color:var(--muted)}
+.up{color:var(--gain)} .dn{color:var(--loss)}
+section{display:flex;flex-direction:column;gap:16px}
+.cols{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.cols{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.panel > h3{margin-bottom:2px}
+.sub{font-size:.88rem;color:var(--muted);margin-bottom:10px}
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font:500 11px var(--f-body);fill:var(--muted)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .zero{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}
+.chart .axt{font-weight:600;fill:var(--muted)}
+.dot{stroke:var(--surface);stroke-width:1.2;opacity:.88;cursor:pointer;outline:none}
+.dot.up{fill:var(--gain)} .dot.dn{fill:var(--loss)}
+.dot:hover,.dot:focus{opacity:1;stroke:var(--ink);stroke-width:1.6}
+.lbl{fill:var(--ink)!important;font-weight:600!important}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:.8rem;line-height:1.45;padding:8px 10px;border-radius:6px;z-index:5;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.25);transform:translate(-50%,-100%)}
+.tip b{display:block;font-weight:600}
+.bars{display:flex;flex-direction:column;gap:14px}
+.bar-row{display:grid;grid-template-columns:78px minmax(0,1fr) 62px;gap:10px;align-items:center}
+.bar-row .k{font-weight:600;font-size:.9rem}
+.track{height:18px;background:var(--soft);border-radius:4px;position:relative;overflow:hidden}
+.fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:4px}
+.bar-row .v{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.bar-note{grid-column:2 / 4;font-size:.8rem;color:var(--muted);margin-top:-8px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{padding:9px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:180px}
+tbody tr:last-child td{border-bottom:0}
+th{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--surface);position:sticky;top:0}
+th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+th button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.scroll{max-height:460px;overflow:auto}
+.tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+input[type=search]{font:inherit;font-size:.92rem;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:0;width:260px;max-width:100%}
+input[type=search]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.count{font-size:.85rem;color:var(--muted)}
+.mini{width:100%;border-collapse:collapse;font-size:.9rem}
+.mini th{position:static;text-align:right}
+.mini th,.mini td{white-space:normal;padding:8px 6px;font-size:.85rem}
+.mini th:first-child,.mini td:first-child{min-width:0}
+.mini th:first-child{text-align:left}
+.models{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.model b{font:700 1.8rem/1.1 var(--f-head)}
+.model p{font-size:.9rem;color:var(--muted);margin-top:6px}
+.model code,.note code{font-size:.82rem;background:var(--soft);padding:1px 5px;border-radius:4px}
+ul.limits{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:8px;color:var(--muted);max-width:70ch}
+ul.limits strong{color:var(--ink);font-weight:600}
+footer{font-size:.85rem;color:var(--muted);display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:20px}
+a{color:var(--accent);text-underline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .5s ease}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Indian mainboard IPOs · Aug to Dec 2025 · 57 listings</div>
+    <h1>Does heavy subscription buy a bigger <em>listing pop</em>?</h1>
+    <p class="lead"><strong>Yes on day one, no after that.</strong> IPOs subscribed 100x or more closed about 40% above issue price on average, and issues under 10x closed flat. But subscription shows no reliable link to what the stock does in the months that follow.</p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>Demand and the day-one pop</h2>
+    <div class="cols">
+      <div class="panel">
+        <h3>Subscription vs listing-day gain</h3>
+        <p class="sub">Each dot is one IPO. Subscription is on a log scale. Hover or tap a dot for details.</p>
+        <div class="chart" id="c1"></div>
+        <div class="legend"><span><i style="background:var(--gain)"></i>Closed above issue price</span><span><i style="background:var(--loss)"></i>Closed at or below issue price</span></div>
+      </div>
+      <div class="panel">
+        <h3>Average listing gain by subscription</h3>
+        <p class="sub">Close on listing day vs issue price</p>
+        <div class="bars" id="bars"></div>
+      </div>
+    </div>
+    <p class="lead">Rank correlation between total subscription and listing gain is 0.57 (p &lt; 0.001). All seven IPOs subscribed 100x or more closed above issue price.</p>
+  </section>
+
+  <section>
+    <h2>Does the pop last?</h2>
+    <div class="cols">
+      <div class="panel">
+        <h3>Listing-day gain vs return till date</h3>
+        <p class="sub">Return till date is a snapshot taken in Nov 2026. One extreme value is pinned to the top edge.</p>
+        <div class="chart" id="c2"></div>
+      </div>
+      <div class="panel">
+        <h3>Day-one winners vs losers</h3>
+        <p class="sub">Grouped by whether the IPO closed above issue price on listing day</p>
+        <div class="tablewrap" style="border:0"><table class="mini" id="persist"></table></div>
+        <p class="sub" style="margin-top:12px">Winners did better on average, but the whole-sample median return is only <span id="medTill"></span>. A few large outliers lift the average, and holding periods differ by listing month.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Explore all 57 IPOs</h2>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Search a company" aria-label="Search a company">
+      <span class="count" id="count"></span>
+    </div>
+    <div class="tablewrap"><div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div></div>
+  </section>
+
+  <section>
+    <h2>What the regression says</h2>
+    <div class="models">
+      <div class="panel model"><h3>Model A</h3><b>R² 0.34</b><p><code>listing gain ~ ln(total subscription) + ln(issue size)</code> Both terms are significant, but about two thirds of the variation stays unexplained.</p></div>
+      <div class="panel model"><h3>Model B</h3><b>R² 0.45</b><p><code>listing gain ~ ln(QIB) + ln(NII) + ln(retail) + ln(issue size)</code> Splitting demand by investor type adds explanatory power. QIB, NII and retail subscription correlate at 0.6 to 0.85, so read the coefficients together, not one by one.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Limits of this study</h2>
+    <ul class="limits">
+      <li><strong>One half-year.</strong> Aug to Dec 2025 only. It says nothing about other market regimes.</li>
+      <li><strong>No valuation multiples.</strong> P/E and P/B need prospectus financials that the source does not carry. The next step is adding them for the largest issues.</li>
+      <li><strong>Snapshot returns.</strong> Return till date is a single Nov 2026 reading, so August listings have had longer to move than December ones.</li>
+      <li><strong>Association, not cause.</strong> Strong demand and a strong pop move together here; the data cannot say which drives which.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>Data: Trendlyne IPO screener (Mainboard 2025), pulled Nov 2026. Two trust listings (Knowledge Realty Trust, Anantam Highways InvIT) are excluded because they have no comparable retail book. Listing gain is computed as listing-day close divided by issue price, minus 1.</p>
+    <p>Tools: Excel, SQL (SQLite) and Python (pandas, statsmodels). Code and workbook: <a href="https://github.com/aashisshh/ipo-valuation-listing-performance" target="_blank" rel="noopener">github.com/aashisshh/ipo-valuation-listing-performance</a></p>
+  </footer>
+</div>
+
+<script>
+const RAW = [["Gujarat Kidney and Super Speciality","2025-12-30",250.8,114.0,1.1,5.7,19.0,5.2,120.0,104.5,36.6],["KSH International","2025-12-23",644.5,384.0,1.1,0.4,0.9,0.8,370.0,355.0,168.0],["ICICI Prudential Asset Management","2025-12-19",10602.6,2165.0,123.9,22.0,2.5,39.2,2600.0,2585.9,40.4],["Nephrocare Health Services","2025-12-17",871.0,460.0,27.5,24.3,2.3,14.0,490.0,471.3,41.5],["Park Medi World","2025-12-17",920.0,162.0,11.5,15.2,3.2,8.1,158.8,147.9,57.8],["Wakefit Innovations","2025-12-15",1288.9,195.0,3.0,1.1,3.2,2.5,195.0,192.3,-30.8],["Corona Remedies","2025-12-15",655.4,1062.0,278.5,208.9,28.7,137.0,1470.0,1438.4,119.4],["Meesho","2025-12-10",5421.2,111.0,120.2,38.2,19.1,79.0,162.5,170.1,131.6],["Aequs","2025-12-10",921.8,124.0,120.9,80.6,78.0,101.6,140.0,151.3,96.5],["Vidya Wires","2025-12-10",300.0,52.0,5.1,52.0,27.9,26.6,52.0,53.2,48.5],["Sudeep Pharma","2025-11-28",895.0,593.0,213.1,116.7,15.7,93.7,730.0,774.1,102.2],["Excelsoft Technologies","2025-11-26",500.0,120.0,47.5,101.7,15.6,43.2,135.0,126.0,-37.6],["Capillary Technologies","2025-11-21",877.5,577.0,57.3,69.8,15.8,53.0,571.9,606.5,-10.7],["Fujiyama Power Systems","2025-11-20",828.0,228.0,5.2,0.9,1.0,2.1,220.0,208.4,52.2],["Tenneco Clean Air","2025-11-19",3600.0,397.0,166.4,40.7,5.1,58.8,505.0,490.8,12.8],["EMMVEE Photovoltaic Power","2025-11-18",2900.0,217.0,1.3,0.3,1.1,1.0,217.0,219.4,27.7],["Physicswallah","2025-11-18",3480.0,109.0,2.7,0.5,1.1,1.8,145.0,155.2,20.7],["Pine Labs","2025-11-14",3899.9,221.0,4.0,0.3,1.2,2.5,242.0,250.9,-20.2],["Billionbrains Garage Ventures (Groww)","2025-11-12",6632.3,100.0,22.0,14.2,9.4,17.6,112.0,131.3,125.0],["Lenskart Solutions","2025-11-10",7278.0,402.0,40.4,18.2,7.5,28.3,395.0,403.1,80.8],["Studds Accessories","2025-11-07",455.5,585.0,160.0,77.0,22.1,73.3,565.0,560.3,-28.9],["Orkla India","2025-11-06",1667.5,730.0,117.6,54.4,7.0,48.7,750.1,713.6,-23.9],["Midwest","2025-10-24",451.0,1065.0,139.9,168.1,24.3,87.9,1165.0,1140.5,-7.0],["Canara HSBC Life Insurance","2025-10-17",2517.5,106.0,7.0,0.3,0.4,2.3,106.0,111.4,27.2],["Seshaasai Technologies","2025-09-30",813.1,423.0,189.6,49.9,9.2,68.1,432.0,411.4,-24.2],["Anand Rathi Share and Stock Brokers","2025-09-30",745.0,414.0,43.8,28.6,4.8,20.7,432.0,445.6,19.3],["Jaro Institute of Technology","2025-09-30",450.0,890.0,35.4,35.5,8.7,22.1,890.0,744.3,-61.5],["Solarworld Energy Solutions","2025-09-30",490.0,351.0,70.4,64.7,49.1,65.0,388.5,323.5,-68.6],["Ganesh Consumer Products","2025-09-29",408.8,322.0,4.2,4.3,1.1,2.7,296.1,294.3,-42.0],["Atlanta Electricals","2025-09-29",687.3,754.0,194.9,54.2,10.4,70.6,857.0,823.4,95.5],["GK Energy","2025-09-26",464.3,153.0,186.3,122.7,20.8,89.6,171.0,167.7,-34.6],["Saatvik Green Energy","2025-09-26",900.0,465.0,10.8,10.0,2.7,6.6,465.0,440.7,-22.9],["iValue Infosolutions","2025-09-25",560.3,299.0,3.2,1.3,1.3,1.8,284.9,281.9,-35.0],["VMS TMT","2025-09-24",148.5,99.0,120.8,227.1,47.9,102.3,104.9,99.7,-56.1],["Euro Pratik Sales","2025-09-23",451.3,247.0,1.1,1.9,1.2,1.3,272.1,248.4,-18.6],["Urban Company","2025-09-17",1900.0,103.0,140.2,74.0,39.3,103.6,162.3,166.8,53.9],["Shringar House of Mangalsutra","2025-09-17",400.9,165.0,101.4,82.6,27.2,60.3,188.5,184.9,89.1],["Dev Accelerator","2025-09-17",143.3,61.0,20.3,88.0,164.7,64.0,61.0,64.0,-28.4],["Amanta Healthcare","2025-09-09",126.0,126.0,35.9,209.4,55.0,82.6,135.0,141.8,55.6],["Anlon Healthcare","2025-09-03",121.0,91.0,1.1,10.6,47.3,7.1,92.0,91.7,207.6],["Vikran Engineering","2025-09-03",772.0,97.0,19.4,58.6,11.0,23.6,99.0,95.7,-40.4],["Mangal Electrical Industries","2025-08-28",400.0,561.0,10.5,18.8,4.8,9.5,556.0,535.4,-56.2],["Patel Retail","2025-08-26",242.8,255.0,272.4,108.2,42.5,95.7,300.0,287.7,-3.3],["Vikram Solar","2025-08-26",2079.4,332.0,142.8,50.9,7.7,54.6,338.0,356.4,-59.0],["Gem Aromatics","2025-08-26",451.3,325.0,55.3,45.1,10.3,30.3,333.1,319.1,-57.4],["Shreeji Shipping Global","2025-08-26",410.7,252.0,110.4,72.7,21.9,58.1,270.0,255.1,245.5],["Regaal Resources","2025-08-20",306.0,102.0,191.0,356.7,57.8,159.9,141.0,131.6,-13.6],["Bluestone Jewellery and Lifestyle","2025-08-19",1540.7,517.0,4.3,0.6,1.4,2.7,510.0,546.0,38.5],["All Time Plastics","2025-08-14",400.6,275.0,10.2,13.5,5.1,8.3,311.3,283.3,-28.4],["JSW Cement","2025-08-14",3600.0,147.0,15.8,11.0,1.8,7.8,153.5,146.1,-17.6],["Highway Infrastructure","2025-08-12",130.0,70.0,420.6,447.3,155.6,300.6,115.0,120.8,2.1],["M&B Engineering","2025-08-06",650.0,385.0,36.7,38.2,32.5,36.2,385.0,409.1,-27.3],["Sri Lotus Developers and Realty","2025-08-06",792.0,150.0,163.9,57.7,20.3,69.1,178.0,196.8,54.7],["National Securities Depository (NSDL)","2025-08-06",4011.6,800.0,104.0,35.0,7.7,41.0,880.0,936.0,-4.8],["Laxmi India Finance","2025-08-05",254.3,158.0,1.3,1.8,2.2,1.9,137.5,134.1,-35.1],["Aditya Infotech","2025-08-05",1300.0,675.0,133.2,72.0,50.9,100.7,1015.0,1082.7,519.3],["Shanti Gold International","2025-08-01",360.1,199.0,117.3,151.5,30.4,81.2,227.6,229.4,38.4]];
+const D = RAW.map(r=>({name:r[0],date:r[1],size:r[2],price:r[3],qib:r[4],nii:r[5],ret:r[6],sub:r[7],open:r[8],close:r[9],till:r[10],gain:(r[9]/r[3]-1)*100}));
+const mean=a=>a.reduce((s,v)=>s+v,0)/a.length;
+const median=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const pct=(v,d=1)=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(d)+'%';
+const cls=v=>v>0?'up':v<0?'dn':'';
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const BUCKETS=[['<10x',0,10],['10-50x',10,50],['50-100x',50,100],['100x+',100,1e9]];
+const bk=BUCKETS.map(([k,lo,hi])=>{const g=D.filter(d=>d.sub>=lo&&d.sub<hi);return {k,n:g.length,avg:mean(g.map(d=>d.gain)),pos:g.filter(d=>d.gain>0).length/g.length}});
+
+// stat tiles
+const avgGain=mean(D.map(d=>d.gain)), posShare=D.filter(d=>d.gain>0).length/D.length, medTill=median(D.map(d=>d.till));
+document.getElementById('stats').innerHTML=[
+ [pct(avgGain),'average listing-day gain across '+D.length+' IPOs',cls(avgGain)],
+ [Math.round(posShare*100)+'%','closed above issue price on day one',''],
+ [pct(bk[3].avg,0),'average gain when subscribed 100x or more (n = '+bk[3].n+')','up'],
+ [pct(medTill),'median return till date, so the pop rarely compounds',cls(medTill)]
+].map(([v,t,c])=>`<div class="stat"><b class="${c}">${v}</b><span>${t}</span></div>`).join('');
+document.getElementById('medTill').textContent=pct(medTill);
+
+// bars
+const maxAvg=Math.max(...bk.map(b=>Math.abs(b.avg)));
+document.getElementById('bars').innerHTML=bk.map(b=>`
+ <div class="bar-row"><span class="k">${b.k}</span><div class="track"><div class="fill" style="width:${Math.max(1.5,Math.abs(b.avg)/maxAvg*100)}%"></div></div><span class="v ${cls(b.avg)}">${pct(b.avg)}</span>
+ <div class="bar-note">${b.n} IPOs · ${Math.round(b.pos*100)}% closed above issue</div></div>`).join('');
+
+// tooltip
+function tipHTML(d){return `<b>${esc(d.name)}</b>Subscribed ${d.sub.toFixed(1)}x · listing gain ${pct(d.gain)}<br>Return till date ${pct(d.till)}`}
+function wireTip(host){
+  if(host._tip){host.appendChild(host._tip);return}
+  const tip=document.createElement('div');tip.className='tip';tip.hidden=true;host.appendChild(tip);host._tip=tip;
+  const show=e=>{const el=e.target.closest('.dot');if(!el)return;const d=D[+el.dataset.i];tip.innerHTML=tipHTML(d);tip.hidden=false;
+    const hb=host.getBoundingClientRect(),eb=el.getBoundingClientRect();
+    let x=eb.left-hb.left+eb.width/2;const half=tip.offsetWidth/2;x=Math.max(half+4,Math.min(hb.width-half-4,x));
+    tip.style.left=x+'px';tip.style.top=(eb.top-hb.top-8)+'px'};
+  host.addEventListener('pointerover',show);host.addEventListener('focusin',show);host.addEventListener('click',show);
+  host.addEventListener('pointerleave',()=>tip.hidden=true);host.addEventListener('focusout',()=>tip.hidden=true);
+}
+const shortName=(n,k=2)=>esc(n.split(' ').slice(0,k).join(' '));
+
+// scatter 1: log subscription vs listing gain
+function drawC1(){
+  const host=document.getElementById('c1'),W=Math.max(300,Math.round(host.clientWidth||640)),narrow=W<480,H=narrow?300:350,m={l:narrow?40:46,r:12,t:14,b:42};
+  const x0=Math.log(0.7),x1=Math.log(420),xs=v=>m.l+(Math.log(v)-x0)/(x1-x0)*(W-m.l-m.r);
+  const ys=v=>m.t+(80-v)/100*(H-m.t-m.b);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter plot of total subscription against listing-day gain for 57 IPOs">`;
+  for(let v=-20;v<=80;v+=20){s+=`<line class="${v===0?'zero':'grid'}" x1="${m.l}" x2="${W-m.r}" y1="${ys(v)}" y2="${ys(v)}"/><text x="${m.l-8}" y="${ys(v)+4}" text-anchor="end">${v}%</text>`}
+  (narrow?[1,10,100]:[1,3,10,30,100,300]).forEach(v=>{s+=`<line class="grid" x1="${xs(v)}" x2="${xs(v)}" y1="${m.t}" y2="${H-m.b}" style="opacity:.55"/><text x="${xs(v)}" y="${H-m.b+16}" text-anchor="middle">${v}x</text>`});
+  s+=`<text class="axt" x="${(m.l+W-m.r)/2}" y="${H-6}" text-anchor="middle">Total subscription (log scale)</text>`;
+  s+=`<text class="axt" transform="translate(12 ${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">Listing-day gain</text>`;
+  D.forEach((d,i)=>{s+=`<circle class="dot ${d.gain>0?'up':'dn'}" data-i="${i}" tabindex="0" cx="${xs(d.sub)}" cy="${ys(d.gain)}" r="5.2"/>`});
+  const top=[...D].sort((a,b)=>b.gain-a.gain).slice(0,3), dys=[4,-5,15];
+  top.forEach((d,k)=>{const x=xs(d.sub),right=x>W*0.6;s+=`<text class="lbl" x="${right?x-9:x+9}" y="${ys(d.gain)+dys[k]}" text-anchor="${right?'end':'start'}">${shortName(d.name,narrow?1:2)}</text>`});
+  host.innerHTML=s+'</svg>';wireTip(host);
+}
+
+// scatter 2: listing gain vs return till date (y capped)
+function drawC2(){
+  const host=document.getElementById('c2'),W=Math.max(300,Math.round(host.clientWidth||520)),narrow=W<480,H=narrow?300:350,m={l:narrow?44:50,r:12,t:16,b:42},CAP=260;
+  const xs=v=>m.l+(v+20)/100*(W-m.l-m.r), ys=v=>m.t+(CAP-v)/(CAP+80)*(H-m.t-m.b);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter plot of listing-day gain against return till date">`;
+  for(let v=-80;v<=240;v+=80){s+=`<line class="${v===0?'zero':'grid'}" x1="${m.l}" x2="${W-m.r}" y1="${ys(v)}" y2="${ys(v)}"/><text x="${m.l-8}" y="${ys(v)+4}" text-anchor="end">${v}%</text>`}
+  (narrow?[-20,0,40,80]:[-20,0,20,40,60,80]).forEach(v=>{s+=`<line class="${v===0?'zero':'grid'}" x1="${xs(v)}" x2="${xs(v)}" y1="${m.t}" y2="${H-m.b}" style="opacity:${v===0?1:.55}"/><text x="${xs(v)}" y="${H-m.b+16}" text-anchor="middle">${v}%</text>`});
+  s+=`<text class="axt" x="${(m.l+W-m.r)/2}" y="${H-6}" text-anchor="middle">Listing-day gain</text>`;
+  s+=`<text class="axt" transform="translate(12 ${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle">Return till date</text>`;
+  D.forEach((d,i)=>{const y=Math.min(d.till,CAP),capped=d.till>CAP;
+    s+=`<circle class="dot ${d.gain>0?'up':'dn'}" data-i="${i}" tabindex="0" cx="${xs(d.gain)}" cy="${ys(y)}" r="${capped?6.2:5.2}"/>`;
+    if(capped)s+=`<text class="lbl" x="${xs(d.gain)-10}" y="${ys(y)+4}" text-anchor="end">${shortName(d.name,1)} ${pct(d.till,0)}${narrow?'':', off scale'}</text>`});
+  host.innerHTML=s+'</svg>';wireTip(host);
+}
+drawC1();drawC2();
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{drawC1();drawC2()},120)});
+
+// day-one winners vs losers
+(function(){
+  const g=[['Closed above issue',D.filter(d=>d.gain>0)],['Closed at or below',D.filter(d=>d.gain<=0)]];
+  document.getElementById('persist').innerHTML='<thead><tr><th></th><th>IPOs</th><th>Avg return</th><th>Median</th><th>In profit</th></tr></thead><tbody>'+
+   g.map(([k,a])=>{const t=a.map(d=>d.till),av=mean(t),md=median(t),p=a.filter(d=>d.till>0).length/a.length;
+     return `<tr><td>${k}</td><td>${a.length}</td><td class="${cls(av)}">${pct(av)}</td><td class="${cls(md)}">${pct(md)}</td><td>${Math.round(p*100)}%</td></tr>`}).join('')+'</tbody>';
+})();
+
+// table
+(function(){
+  const cols=[['name','Company',d=>esc(d.name)],['date','Listed',d=>d.date],['size','Issue size (₹ Cr)',d=>d.size.toLocaleString('en-IN',{maximumFractionDigits:0})],
+   ['price','Issue price (₹)',d=>d.price.toLocaleString('en-IN')],['sub','Subscribed',d=>d.sub.toFixed(1)+'x'],
+   ['gain','Listing gain',d=>`<span class="${cls(d.gain)}">${pct(d.gain)}</span>`],['till','Till date',d=>`<span class="${cls(d.till)}">${pct(d.till)}</span>`]];
+  let key='date',dir=-1,query='';
+  const head=document.querySelector('#tbl thead'),body=document.querySelector('#tbl tbody'),count=document.getElementById('count');
+  function render(){
+    head.innerHTML='<tr>'+cols.map(([k,l])=>`<th scope="col" aria-sort="${k===key?(dir>0?'ascending':'descending'):'none'}"><button data-k="${k}">${l}<span aria-hidden="true">${k===key?(dir>0?'▲':'▼'):''}</span></button></th>`).join('')+'</tr>';
+    const rows=D.filter(d=>d.name.toLowerCase().includes(query)).sort((a,b)=>{const x=a[key],y=b[key];return (x>y?1:x<y?-1:0)*dir});
+    body.innerHTML=rows.map(d=>'<tr>'+cols.map(([k,,f])=>`<td>${f(d)}</td>`).join('')+'</tr>').join('');
+    count.textContent=rows.length+' of '+D.length+' IPOs';
+  }
+  head.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;if(k===key)dir*=-1;else{key=k;dir=k==='name'?1:-1}render()});
+  document.getElementById('q').addEventListener('input',e=>{query=e.target.value.trim().toLowerCase();render()});
+  render();
+})();
+</script>
+
+</body>
+</html>
